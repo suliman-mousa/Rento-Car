@@ -5,7 +5,7 @@ An administrative single-page application (SPA) for the car rental platform. Bui
 The dashboard acts as an administrative client and does not access the database directly. Business operations and server-side authorization are handled by the backend API.
 
 > **Diagrams:** see [`dashboard-diagrams.md`](./diagrams/dashboard-diagrams.md) for C4, UML state/sequence, defense-in-depth, and deployment diagrams.
-> Project diagrams also live in [`DIAGRAMS.md`](./DIAGRAMS.md).
+
 
 ## Table of Contents
 
