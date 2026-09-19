@@ -278,7 +278,7 @@ sequenceDiagram
   participant Detail as "/cars/[id] RSC + client"
   participant Verify as "POST /bookings/verify"
   participant Checkout as "/bookings/checkout"
-  participant Create as "POST /bookings multipart"
+  participant BookingAPI as "POST /bookings multipart"
   participant API as "Upstream API"
 
   List->>Detail: Navigate to ROUTES.CAR_DETAILS(id)
@@ -291,12 +291,12 @@ sequenceDiagram
   Verify->>API: Verify availability
   API-->>Verify: OK
 
-  Detail->>Checkout: Save booking session → navigate
-  Checkout->>Create: Create booking FormData
-  Create->>API: POST /bookings
-  API-->>Create: Booking created
-  Create-->>Checkout: Success
-  Checkout->>Checkout: Navigate → my bookings
+  Detail->>Checkout: Save booking session and navigate
+  Checkout->>BookingAPI: Create booking FormData
+  BookingAPI->>API: POST /bookings
+  API-->>BookingAPI: Booking created
+  BookingAPI-->>Checkout: Success
+  Checkout->>Checkout: Navigate to my bookings
 ```
 
 Booking availability is verified in a separate step **before** checkout, rather than only at final submission — surfacing conflicts (e.g. a vehicle just booked by someone else) earlier in the flow instead of after the customer has filled out the full checkout form.
