@@ -3,7 +3,6 @@
 **Scope:** Customer + Rental-Office Flutter application
 
 This report documents a security, performance, stability, and quality hardening pass on the mobile application: **what was identified**, **why it mattered**, and **the resolution delivered**.
-
 ---
 
 ## Executive Summary
