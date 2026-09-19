@@ -274,24 +274,29 @@ This dual-path design (server-prefetched initial state + client-side refetch onl
 
 ```mermaid
 sequenceDiagram
-  participant List as /cars list
-  participant Detail as /cars/[id] RSC + client
-  participant Verify as bookings/verify
-  participant Checkout as /bookings/checkout
-  participant Create as POST /bookings multipart
-  participant API as Upstream
+  participant List as "/cars list"
+  participant Detail as "/cars/[id] RSC + client"
+  participant Verify as "POST /bookings/verify"
+  participant Checkout as "/bookings/checkout"
+  participant Create as "POST /bookings multipart"
+  participant API as "Upstream API"
 
-  List->>Detail: navigate ROUTES.CAR_DETAILS(id)
+  List->>Detail: Navigate to ROUTES.CAR_DETAILS(id)
   Detail->>API: GET /cars/id (server prefetch)
-  Detail->>Detail: Product JSON-LD + UI
-  Note over Detail: user picks dates / delivery
-  Detail->>Verify: useApi POST bookings/verify
-  Verify->>API: verify
-  API-->>Verify: ok
-  Detail->>Checkout: save session → navigate
-  Checkout->>Create: create booking FormData
+  Detail->>Detail: Generate Product JSON-LD + UI
+
+  Note over Detail: User picks dates / delivery
+
+  Detail->>Verify: POST bookings/verify
+  Verify->>API: Verify availability
+  API-->>Verify: OK
+
+  Detail->>Checkout: Save booking session → navigate
+  Checkout->>Create: Create booking FormData
   Create->>API: POST /bookings
-  Checkout->>Checkout: success → my bookings
+  API-->>Create: Booking created
+  Create-->>Checkout: Success
+  Checkout->>Checkout: Navigate → my bookings
 ```
 
 Booking availability is verified in a separate step **before** checkout, rather than only at final submission — surfacing conflicts (e.g. a vehicle just booked by someone else) earlier in the flow instead of after the customer has filled out the full checkout form.
