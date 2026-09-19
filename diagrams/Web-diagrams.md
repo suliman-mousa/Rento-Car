@@ -4,7 +4,7 @@
 Visual overview of the most important parts of the Customer Web application.
 Diagrams use [Mermaid](https://mermaid.js.org/) (renders natively on GitHub and most Markdown previews).
 
-**Related:** [web-architecture.md](../web-architecture.md)
+**Related:** [web-architecture.md](../Web-architecture.md)
 
 ---
 
