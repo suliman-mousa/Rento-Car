@@ -4,7 +4,7 @@
 
 This document describes how the Customer Web application is structured, how data flows between the browser, the Next.js server, and the upstream API, and which security measures protect that boundary.
 
-> **Diagrams:** see [`web-diagrams.md`](./diagrams/web-diagrams.md) for the full set of Mermaid flowcharts and sequence diagrams (BFF proxy, auth flows, booking flow, security layers).
+> **Diagrams:** see [`web-diagrams.md`](./diagrams/Web-diagrams.md) for the full set of Mermaid flowcharts and sequence diagrams (BFF proxy, auth flows, booking flow, security layers).
 
 ## Table of Contents
 
