@@ -3,7 +3,6 @@
 **Scope:** Customer Web (Next.js BFF frontend)
 
 This report documents a security, performance, stability, and quality hardening pass on the customer-facing web platform: **what was identified**, **why it mattered**, and **the resolution delivered**.
-
 ---
 
 ## Executive Summary
