@@ -100,9 +100,3 @@ Responsibilities spanned architectural planning, technical decision-making, task
 A deliberate engineering principle throughout: **improve architectural consistency while preserving delivery velocity and production stability** — documented explicitly in each architecture doc's trade-offs section, rather than presenting the system as a theoretical ideal.
 
 ---
-
-## Related Documentation
-
-- [`web-architecture.md`](./web-architecture.md) — Customer Web (Next.js BFF)
-- [`docs/mobile-architecture.md`](./docs/mobile-architecture.md) — Mobile (Flutter)
-- [`docs/dashboard-architecture.md`](./docs/dashboard-architecture.md) — Admin Dashboard (React SPA)
