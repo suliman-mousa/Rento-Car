@@ -1,0 +1,342 @@
+# Test Strategy & Assurance Report
+## HalaCar Admin Dashboard (Frontend SPA)
+
+| Field | Value |
+| --- | --- |
+| **Document ID** | HC-QA-TS-001 |
+| **Document type** | Test strategy / assurance baseline |
+| **System** | HalaCar admin SPA (`halacar`) |
+| **Scope** | Frontend verification and validation |
+| **Classification** | Internal engineering |
+| **Status** | Baseline, approved for iterative expansion |
+
+---
+
+## 1. Executive summary
+
+A frontend quality-assurance layer has been established following a standard test pyramid, with clear separation between unit/component testing, network simulation, and end-to-end verification of the critical journey. The browser is treated as an untrusted client; UI guards are therefore never a substitute for API authorization.
+
+The verification stack is aligned with a risk-based, layered test strategy consistent with the process intent of ISO/IEC/IEEE 29119 and ISTQB guidance, with accessibility smoke checks inspired by WCAG 2.2 through automated axe rules. The current baseline protects session handling, routing guards, HTTP orchestration, and the login surface. Depth on domain CRUD flows remains planned work.
+
+**Baseline verdict:** fit as a quality foundation. It is suitable for gating CI on the shared critical modules, but it is not yet a product-wide regression suite. The enforced coverage figure applies only to a deliberately scoped set of modules and must not be quoted as project-wide coverage.
+
+---
+
+## 2. Purpose and scope
+
+### 2.1 Purpose
+
+1. Define what is tested, how, and to what exit criteria.
+2. Record the tooling contract so contributors do not introduce parallel patterns.
+3. Provide an auditable baseline for frontend release-readiness discussions.
+
+### 2.2 In scope
+
+- Unit and component tests (Vitest + React Testing Library)
+- Hook and API-client behavior with network isolation (MSW)
+- Automated accessibility smoke checks on selected interactive controls (jest-axe)
+- Critical-path E2E against the Vite-served SPA (Playwright)
+- Static checks: ESLint and `tsc --noEmit` (JavaScript project, TypeScript tooling)
+- CI orchestration and artifact retention (coverage, Playwright report)
+
+### 2.3 Out of scope
+
+- Laravel API authorization, RBAC, and server-side validation (backend ownership)
+- Performance, load, and soak testing
+- Penetration testing and formal WCAG conformance audits
+- Visual regression and OpenAPI contract testing
+- Native mobile applications
+
+---
+
+## 3. References
+
+| Reference | Role in this program |
+| --- | --- |
+| ISO/IEC/IEEE 29119 (software testing) | Process vocabulary: strategy, levels, conditions, documentation (including part 3 for test documentation, which superseded IEEE 829) |
+| ISTQB Foundation / Agile | Test levels, independence, risk-based prioritization, test pyramid |
+| WCAG 2.2 | Accessibility intent; axe is used as a smoke check, not a certification |
+| OWASP ASVS (informative) | Session and token hygiene expectations reflected in unit tests |
+| Project architecture docs | System boundaries and trust model |
+
+This document is informative implementation guidance, not a claim of formal certification against any of the above.
+
+---
+
+## 4. System under test
+
+| Attribute | Value |
+| --- | --- |
+| Type | Single-page application |
+| Base path | `/dashboard/` |
+| Stack | React 19, Vite 7, JavaScript/JSX, Tailwind |
+| Routing | React Router 7 |
+| State | Zustand (UI and session-adjacent); token handled in `auth.js` only |
+| HTTP | Axios with centralized `useApi` |
+| i18n | Arabic (default, RTL) and English (LTR) |
+| Realtime | Laravel Echo + Pusher (isolated from the REST path) |
+| Trust boundary | Browser untrusted; API authoritative for authorization and validation |
+
+---
+
+## 5. Quality objectives
+
+| Quality attribute | Objective | Primary evidence |
+| --- | --- | --- |
+| Correctness | Critical helpers and request orchestration behave per contract | Unit and hook tests |
+| Security hygiene (client) | Token storage, expiry rules, safe URLs | `auth` and `safeUrl` tests |
+| Reliability | Protected routes and consistent session assumptions | Component tests and E2E |
+| Usability / accessibility | Interactive controls expose roles and names; no axe smoke violations on sampled UI | jest-axe and label association |
+| Maintainability | One HTTP mock strategy; co-located tests; shared `render` | Contributor rules and `src/test/*` |
+| Release confidence | Lint, typecheck, unit tests with coverage, and E2E in CI | `.github/workflows/ci.yml` |
+
+---
+
+## 6. Test strategy
+
+### 6.1 Principles
+
+1. **Risk-based:** prioritize session handling, auth client logic, routing guards, and HTTP error handling over decorative UI.
+2. **Behavior over implementation:** query by role, label, and text; drive the UI with `userEvent`.
+3. **Single network fake:** MSW only. Never mock Axios or `fetch` ad hoc in feature tests.
+4. **Pyramid:** many fast unit and component tests; few E2E flows.
+5. **Defense-in-depth awareness:** UI tests make no claim of authorization coverage.
+
+### 6.2 Test levels
+
+```text
+                 ┌─────────────────────┐
+                 │  E2E (Playwright)   │  Critical journeys only
+                 │  Chromium/FF/WebKit │
+                 └──────────▲──────────┘
+                            │
+                 ┌──────────┴──────────┐
+                 │ Client integration  │  useApi + MSW handlers
+                 │ (MSW)               │
+                 └──────────▲──────────┘
+                            │
+         ┌──────────────────┴──────────────────┐
+         │ Component + a11y (RTL, jest-axe)    │
+         └──────────────────▲──────────────────┘
+                            │
+         ┌──────────────────┴──────────────────┐
+         │ Unit (pure utils / validators)      │
+         └─────────────────────────────────────┘
+```
+
+| Level | Tooling | Typical items |
+| --- | --- | --- |
+| Unit | Vitest | `auth`, `safeUrl`, `financeMetrics`, `carImageValidation` |
+| Component | Vitest + RTL + user-event | `Toggle`, `ProtectedRoute` |
+| Client integration | Vitest + MSW | `useApi` success and validation error |
+| Accessibility smoke | jest-axe | Selected controls |
+| E2E | Playwright | Login form rendering and sign-in journeys: successful login, wrong password, non-admin account, and unauthenticated redirect under `/dashboard/login` |
+| Static | ESLint, `tsc --noEmit` | Hygiene checks |
+
+### 6.3 Design techniques in use
+
+| Technique | Application |
+| --- | --- |
+| Equivalence partitioning | Opaque tokens vs JWT vs missing tokens |
+| Boundary values | Image size at maximum bytes ± 1 |
+| Decision tables (lightweight) | Auth expiry rules |
+| Negative testing | MSW 422 validation payloads |
+| Accessibility tree assertions | `getByRole` and `getByLabel` |
+| Exploratory (manual, complementary) | Pre-release RTL/LTR and CRUD smoke (not automated) |
+
+---
+
+## 7. Environment and configuration
+
+| Concern | Standard |
+| --- | --- |
+| Unit/component host | jsdom via Vitest |
+| API base in tests | `http://localhost/api` (`.env.test` and Vitest `test.env`) |
+| Providers in RTL | `MemoryRouter` + `I18nextProvider` only (no QueryClient, Redux, or theme provider) |
+| E2E base URL | `http://localhost:5173` |
+| E2E app path | `/dashboard/` (Vite `base`) |
+| E2E browsers | Chromium, Firefox, WebKit |
+| E2E web server | `npm run dev`; reused locally, fresh on CI |
+| Trace policy | `on-first-retry`; CI retries = 2 |
+
+**Local E2E prerequisite:** `npx playwright install`
+**Linux CI prerequisite:** `npx playwright install --with-deps`
+
+---
+
+## 8. Entry, exit, and suspension criteria
+
+### 8.1 Entry criteria
+
+- Dependencies installed (`npm ci` or `npm install`)
+- No unresolved compile errors in changed paths
+- For E2E: Playwright browsers installed and port 5173 available (or web server managed)
+
+### 8.2 Exit criteria (current frontend gate)
+
+| Gate | Criterion |
+| --- | --- |
+| Lint | `npm run lint` exits 0 |
+| Typecheck | `npm run typecheck` exits 0 |
+| Automated tests | `npm run test:run` exits 0 |
+| Coverage | `npm run test:coverage` meets at least 70% lines and functions on `test.coverage.include` |
+| E2E | `npm run e2e` exits 0 on all configured projects |
+
+### 8.3 Suspension and waiver
+
+- A backend outage does not suspend unit or component suites (MSW isolation).
+- E2E may be waived for documentation-only changes with an explicit reviewer note.
+- Coverage threshold failures inside included modules are not waived unless the PR adds tests or justifies the change to the include list.
+
+---
+
+## 9. Metrics and coverage policy
+
+### 9.1 Structural coverage
+
+- **Provider:** V8
+- **Reporters:** text, html, lcov
+- **Thresholds:** 70% lines, 70% functions
+- **Gated surface (`include`):** shared utils, `useApi`, selected components (`Toggle`, `ProtectedRoute`), and feature utils already under test
+- **Global report:** coverage across all of `src/` is generated alongside, with no threshold, so the true project-wide figure is always visible. The enforced percentage applies to the gated surface only and must never be quoted as project coverage.
+
+**Rationale:** gating the entire `src/features/**/pages` tree at 70% before tests exist would produce a permanently failing CI. The include list is an intentional quality perimeter, expanded feature by feature.
+
+### 9.2 Product metrics (recommended tracking)
+
+| Metric | Source | Target direction |
+| --- | --- | --- |
+| Defect escape rate (production bugs lacking a test) | Issue tracker | Decreasing |
+| Flaky E2E rate | CI run history | Low and trending down |
+| Time to fix a broken main branch | CI and issue tracker | Under one business day |
+| Critical flows with E2E | Test inventory | Growing (sign-in success and failure, non-admin account, and unauthenticated redirect are now included; logout and one CRUD flow remain planned) |
+
+### 9.3 Flaky-test policy
+
+A test that fails intermittently is fixed or quarantined with a tracking issue within one sprint. CI retries are a diagnostic aid, not a fix, and a quarantined test must have an owner.
+
+---
+
+## 10. Traceability (risk to tests)
+
+| Risk / requirement (frontend) | Evidence |
+| --- | --- |
+| Opaque Sanctum tokens must not be treated as expired JWTs | `src/utils/auth.test.js` |
+| Expired JWT clears the session | `src/utils/auth.test.js` |
+| External URLs allow http(s) only | `src/utils/safeUrl.test.js` |
+| Anonymous users cannot render protected pages | `ProtectedRoute.test.jsx` |
+| `useApi` normalizes success and surfaces field errors | `useApi.test.jsx` + MSW |
+| Toggle exposes switch semantics | `Toggle.test.jsx` + axe |
+| Guest can open login under `/dashboard/login` with labeled fields | `e2e/login.spec.ts` |
+| Car image MIME and size filter | `carImageValidation.test.js` |
+| Finance metric formulas | `financeMetrics.test.js` |
+
+---
+
+## 11. Risk register
+
+| ID | Risk | Likelihood | Impact | Mitigation |
+| --- | --- | --- | --- | --- |
+| R1 | Low page-level coverage allows CRUD regressions | High | High | Expand RTL tests per feature using the `FEATURE_PROMPT` checklist |
+| R2 | Sign-in E2E coverage may be incomplete or fail if the new journeys are not verified in CI | Medium | High | Sign-in success, wrong-password, non-admin, and unauthenticated-redirect journeys have been added; record and verify their execution results in CI (P0) |
+| R3 | A 403 response clears the session in the Axios interceptor, contradicting the architecture doc | Medium | High | Decide the intended behavior (only 401 clears the session), then encode it as an expected-failing test until the product is fixed |
+| R4 | Coverage include list stagnates | Medium | Medium | Require include-list expansion when new shared modules are merged |
+| R5 | Axe smoke mistaken for WCAG certification | Low | Medium | Documented as smoke only (§3, §5, §16) |
+| R6 | Realtime (Echo/Pusher) untested | Medium | Medium | Keep isolated; add listener unit tests with a mocked Echo when needed |
+| R7 | Colour contrast and layout-dependent a11y rules cannot be evaluated in jsdom | Medium | Medium | Run axe inside Playwright on login and shell pages, including RTL |
+
+---
+
+## 12. CI/CD integration
+
+Pipeline (`.github/workflows/ci.yml`):
+
+1. Checkout, Node 20 (npm cache), `npm ci`
+2. Lint, typecheck
+3. Vitest with coverage
+4. Playwright install (`--with-deps`), E2E
+5. Upload artifacts: `coverage/`, `playwright-report/`
+
+**Recommended merge policy:** all steps green on the PR branch.
+
+---
+
+## 13. Roles and responsibilities
+
+| Role | Responsibility |
+| --- | --- |
+| Feature developer | Co-located tests for changed behavior; MSW handlers for new endpoints used in tests |
+| Reviewer | Reject PRs that mock Axios directly or assert on implementation details |
+| Maintainer | Coverage include list, CI flakes, Playwright version pins |
+| Backend team | Contract stability and authoritative authorization (outside frontend test claims) |
+
+Contributor rules: [`.cursor/rules/testing.mdc`](../.cursor/rules/testing.mdc)
+Operator cheat-sheet: [`TESTING.md`](../TESTING.md)
+
+---
+
+## 14. Baseline execution record
+
+| Suite | Command | Last known result (2026-10-17) |
+| --- | --- | --- |
+| Unit / component | `npm run test:run` | Pass: 7 files, 23 tests |
+| Coverage gate | `npm run test:coverage` | Pass on the gated surface (at least 70% required); applies to the scoped include list only |
+| E2E baseline | `npx playwright test e2e/login.spec.ts --project=firefox` | Previously recorded pass on Firefox; Chromium and WebKit are configured but not recorded in this baseline |
+| Sign-in journey tests | `e2e/login.spec.ts` | Added: successful login, wrong password, non-admin account, and unauthenticated redirect. A passing execution result is not recorded here yet |
+
+Defect found by E2E and corrected: login labels were not programmatically associated with their inputs (`htmlFor`/`id`), so `getByLabel` failed. Fixed in `Login.jsx`.
+
+---
+
+## 15. Gap analysis and roadmap
+
+| Priority | Item | Rationale |
+| --- | --- | --- |
+| P0 | Verify E2E sign-in success and failure (wrong password, non-admin account, unauthenticated redirect) with API routes stubbed | Test scenarios have been added; verify and record passing execution results. Logout and CRUD coverage remain outstanding |
+| P0 | Interceptor tests: 401 clears the session, 403 does not; encode as an expected-failing test until the product is aligned (R3) | Session correctness |
+| P0 | Expand MSW + RTL to one full CRUD feature (e.g. offices list and create error path) | Risk-based depth |
+| P0 | Record E2E results for Chromium and WebKit, not only Firefox | Cross-browser evidence |
+| P1 | AbortController race tests on list pages | Reliability |
+| P1 | Axe inside Playwright on login and shell pages (R7) | Contrast and RTL coverage |
+| P1 | Global coverage report alongside the scoped threshold | Honest reporting |
+| P2 | Broaden the coverage include list after each shared module gains tests | Prevent metric theater |
+| P2 | i18n RTL layout assertions on the shell | Localization quality |
+| P3 | Visual, contract, and performance tracks | Separate programs |
+
+---
+
+## 16. Compliance statement
+
+The frontend test program:
+
+- Implements a documented strategy, leveled tests, entry and exit criteria, and CI evidence consistent with the process intent of ISO/IEC/IEEE 29119.
+- Does not assert formal certification to ISO, ISTQB accreditation, or WCAG conformance.
+- Treats automated accessibility as smoke detection, not as legal or procurement-grade sign-off.
+- Excludes backend authorization from any frontend "security passed" claim.
+
+---
+
+## 17. Document history
+
+| Version | Date | Changes |
+| --- | --- | --- |
+| 1.0 | 2026-10-17 | Initial test strategy and assurance report |
+| 1.1 | 2026-10-18 | Single language; global coverage reporting; sign-in E2E and interceptor tests promoted to P0; R2/R3 reframed; R7 and flaky-test policy added; cross-browser recording noted; reference to IEEE 829 replaced by ISO/IEC/IEEE 29119-3 |
+| 1.2 | 2026-10-18 | Updated E2E scope and roadmap to reflect the addition of successful sign-in, wrong-password, non-admin account, and unauthenticated-redirect scenarios; execution results remain to be recorded |
+
+---
+
+## 18. Appendix: commands quick reference
+
+```bash
+npm run test:run        # Vitest once
+npm run test:coverage   # Vitest + V8 thresholds
+npm run e2e             # Playwright (all projects)
+npm run lint
+npm run typecheck
+npx playwright install  # local browser binaries (once)
+```
+
+---
+
+*End of document HC-QA-TS-001*
