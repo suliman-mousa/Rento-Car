@@ -1,11 +1,11 @@
 # Test Strategy & Assurance Report
-## HalaCar Admin Dashboard (Frontend SPA)
+## Rento Admin Dashboard (Frontend SPA)
 
 | Field | Value |
 | --- | --- |
 | **Document ID** | HC-QA-TS-001 |
 | **Document type** | Test strategy / assurance baseline |
-| **System** | HalaCar admin SPA (`halacar`) |
+| **System** | Rento admin SPA (`Rento`) |
 | **Scope** | Frontend verification and validation |
 | **Classification** | Internal engineering |
 | **Status** | Baseline, approved for iterative expansion |
