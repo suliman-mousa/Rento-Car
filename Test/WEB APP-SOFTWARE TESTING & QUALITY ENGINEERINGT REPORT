@@ -1,0 +1,739 @@
+# SOFTWARE TESTING & QUALITY ENGINEERING ASSESSMENT REPORT
+
+## Rento Car — Next.js App Router Backend-for-Frontend (BFF)
+
+| Document Attribute | Details |
+|---|---|
+| Document Type | Engineering Assessment and Quality Assurance Baseline |
+| Project | `rent-car` — Customer Web Application |
+| Architecture | Next.js App Router with Backend-for-Frontend (BFF) |
+| Classification | Internal Engineering |
+| Version | 1.3 |
+| Assessment Date | 17 October 2026 |
+| Status | Automated Testing Baseline Established; Critical Business, Authentication, Security, Financial, and Operational Scenarios Successfully Verified on the Platform; Automation Expansion Ongoing |
+| Primary Test Framework | Vitest |
+| Component Testing | React Testing Library |
+| Network Mocking | MSW v2 |
+| End-to-End Testing | Playwright |
+| CI Platform | GitHub Actions |
+| Related Documents | `TESTING.md`, `docs/ARCHITECTURE.md`, `docs/IMPROVEMENTS_REPORT.md`, `.cursor/rules/testing.mdc` |
+
+---
+
+## 1. Executive Summary
+
+This report assesses the software testing strategy, quality assurance infrastructure, and verification baseline established for the Rento Car customer-facing web application.
+
+The application is built on Next.js App Router and operates as a Backend-for-Frontend (BFF), providing a controlled interface between the browser and the upstream API. The testing strategy therefore prioritizes server-side request handling, authentication and session management, authorization boundaries, business-critical workflows, financial consistency, and operational resilience.
+
+The current quality baseline combines two complementary verification approaches:
+
+1. **Automated testing:** A repeatable test suite covering security-sensitive server handlers, authentication logic, selected client components, network interactions, accessibility smoke checks, and public-route end-to-end behavior.
+2. **Platform-level verification:** Practical execution of critical scenarios covering booking integrity, authentication lifecycle operations, authorization and tenant isolation, financial correctness, rate limiting, network failures, retry behavior, and performance-sensitive and operational scenarios.
+
+The reported automated baseline consists of 48 passing tests across 15 files, with approximately 91% statement coverage across explicitly scoped files. TypeScript type checking passes, and Playwright is configured for Chromium, Firefox, and WebKit.
+
+In addition to the automated suite, the following authentication lifecycle operations have been successfully verified on the platform:
+
+- `signup`
+- `password-reset-session`
+- `logout`
+- `sync-user`
+
+Rate-limiting behavior has also been tested successfully.
+
+The platform verification further covers the identified booking-integrity scenarios, security and authorization boundaries, financial calculations and transaction behavior, network failure handling, and operational behavior under the conditions exercised.
+
+These results provide additional evidence of application behavior beyond the automated coverage currently available in the repository.
+
+A distinction must nevertheless be maintained between successful execution of platform-level scenarios and automated regression protection. Platform verification provides evidence for the scenarios and conditions actually exercised. Automated tests make those checks repeatable and help detect regressions introduced by subsequent changes.
+
+### 1.1 Quality Baseline
+
+| Quality Indicator | Current Status |
+|---|---|
+| Automated unit, component, and handler tests | 48 passing across 15 files |
+| Scoped statement coverage | Approximately 91% |
+| Configured coverage thresholds | At least 70% for lines, functions, branches, and statements |
+| TypeScript type checking | Passing |
+| BFF allowlist and request-guard tests | Implemented |
+| Authentication and session-handler tests | Implemented for selected handlers |
+| `signup` platform verification | Successfully verified |
+| `password-reset-session` platform verification | Successfully verified |
+| `logout` platform verification | Successfully verified |
+| `sync-user` platform verification | Successfully verified |
+| Rate-limiting platform verification | Successfully verified |
+| Booking-integrity verification | Reported successful across the identified scenarios |
+| Security and authorization verification | Reported successful across the identified scenarios |
+| Financial-consistency verification | Reported successful across the identified scenarios |
+| Operational and network-resilience verification | Reported successful for the scenarios exercised |
+| Playwright E2E framework | Configured for Chromium, Firefox, and WebKit |
+| CI quality pipeline | Implemented; lint remains non-blocking |
+| Automated regression protection for all verified platform scenarios | Expansion ongoing |
+
+### 1.2 Engineering Verdict
+
+The current implementation represents a well-structured testing foundation supported by successful platform-level verification of the identified critical scenarios.
+
+The automated baseline provides meaningful protection for selected security boundaries and application behavior. The additional platform verification strengthens confidence in the behavior of booking workflows, authentication lifecycle operations, authorization controls, financial operations, rate limiting, and operational failure handling.
+
+The primary remaining objective is to preserve the verification evidence and convert the highest-risk platform-verified scenarios into repeatable automated regression tests wherever equivalent automation is not yet available.
+
+The current baseline supports continued engineering development and testing expansion. It does not, by itself, constitute an independent security audit, formal compliance certification, or unconditional production-readiness certification.
+
+---
+
+## 2. Assessment Objectives and Scope
+
+### 2.1 Objectives
+
+The testing initiative is designed to:
+
+1. Establish a repeatable verification process integrated into the development lifecycle.
+2. Protect security-sensitive BFF boundaries, including route allowlists, origin validation, rate limiting, and session handling.
+3. Apply a testing strategy appropriate to Next.js App Router and React Server Components.
+4. Validate authentication lifecycle operations, authorization, booking integrity, and financial consistency.
+5. Introduce maintainable automated testing patterns for Route Handlers, client components, hooks, and network-dependent features.
+6. Enforce meaningful coverage thresholds over explicitly defined high-risk modules.
+7. Verify critical workflows through practical platform-level execution.
+8. Validate rate-limiting behavior and selected network and operational failure scenarios.
+9. Establish a clear path from successful platform verification to automated regression prevention.
+10. Improve traceability and reproducibility of quality assessments.
+
+### 2.2 In-Scope Components
+
+The assessment includes:
+
+- Vitest unit and integration tests.
+- React Testing Library and `user-event`.
+- MSW v2 for controlled network interactions.
+- `jest-axe` accessibility smoke checks.
+- Playwright browser-based E2E infrastructure.
+- GitHub Actions continuous integration.
+- BFF proxy and security helper tests.
+- Authentication, session, and login handler tests.
+- Contact feature parsing, service, and UI tests.
+- Authentication lifecycle platform verification.
+- Booking-integrity and state-transition scenarios.
+- Authorization and tenant-isolation scenarios.
+- Financial calculations and transaction-consistency scenarios.
+- Rate limiting, network failures, timeout handling, and retry behavior.
+- Performance-sensitive and operational scenarios under the conditions exercised.
+- Testing documentation and developer conventions.
+
+### 2.3 Scope Limitations
+
+The following capabilities are not fully established by the automated baseline described in this report:
+
+- Complete automated regression coverage for all platform-verified scenarios.
+- Fully automated authenticated booking E2E in CI.
+- Formal contract testing against the upstream OpenAPI specification.
+- Comprehensive automated security testing or independent penetration testing.
+- A fully documented load, stress, endurance, and chaos-testing program with quantitative acceptance criteria.
+- Comprehensive visual regression testing.
+- Native iOS and Android application testing.
+- Independent verification of production monitoring, alerting, and incident-response effectiveness.
+
+Rate limiting, network resilience, and performance-sensitive behavior have been exercised at the platform level as reported. This should not be interpreted as proof of a comprehensive load-testing program unless the corresponding workload profiles, measurements, and acceptance criteria are documented.
+
+---
+
+## 3. System Under Test
+
+### 3.1 Architectural Context
+
+Rento Car uses Next.js App Router as the customer web frontend and a Backend-for-Frontend layer to mediate requests to the upstream API.
+
+The documented architecture includes:
+
+- Browser requests routed through same-origin `/api/*` endpoints.
+- Authentication tokens held in `HttpOnly` cookies.
+- A generic proxy at `/api/backend/[...path]`.
+- Path and HTTP-method allowlisting.
+- Server-side injection of the upstream `x-api-key`.
+- Optional Bearer authentication derived from cookies.
+- Dedicated authentication endpoints under `/api/auth/*`.
+- Axios-based client requests using `/api/backend` as the base URL.
+- A `useApi` abstraction for client-side API consumption.
+- Zustand for client-side session and interface state.
+- `next-intl` for internationalization.
+
+### 3.2 Testing Implications
+
+This architecture requires explicit testing of both the browser-facing interface and the server-side boundary.
+
+The testing strategy must distinguish between:
+
+- Client-side session presentation and actual server-side authorization.
+- Successful proxy forwarding and authorized proxy forwarding.
+- HTTP success responses and successful business operations.
+- A booking request being accepted and the booking being persisted consistently.
+- A request timeout and the actual outcome of the operation on the upstream system.
+- A passing test suite and sufficient coverage of business-critical failure modes.
+- Successful rate-limit verification under tested conditions and demonstrated capacity under a defined workload.
+- Successful platform verification and permanent automated regression protection.
+
+Server handlers, authorization checks, request guards, booking operations, and financial boundaries are therefore treated as high-priority testing targets.
+
+---
+
+## 4. Testing Strategy and Quality Principles
+
+### 4.1 Risk-Based Testing
+
+Testing effort is prioritized according to business impact and technical risk.
+
+The primary risk categories are:
+
+1. Booking integrity and vehicle availability.
+2. Authentication, authorization, and tenant isolation.
+3. Financial correctness and transaction consistency.
+4. Rate limiting, network reliability, and operational stability.
+5. Client-side behavior and accessibility.
+6. Automated regression protection and maintainability.
+
+The platform-level verification described in Section 6 supplements the automated suite by addressing scenarios that are not yet comprehensively represented in CI.
+
+### 4.2 Test Pyramid and Verification Layers
+
+| Layer | Technology | Primary Responsibility |
+|---|---|---|
+| Unit tests | Vitest, Node.js | Pure functions, parsers, validation, allowlists, and guards |
+| Route Handler tests | Vitest | HTTP responses, validation, cookies, authorization decisions, and upstream calls |
+| Component tests | Vitest, React Testing Library | Accessible interface behavior and state transitions |
+| Network integration tests | MSW v2 | Client behavior under successful and failed API interactions |
+| Accessibility smoke tests | `jest-axe` | Detection of selected accessibility violations |
+| Browser E2E tests | Playwright | Real-browser navigation, public page rendering, and selected journeys |
+| Platform verification | Practical scenario execution | Business-critical behavior under the scenarios and conditions exercised |
+| Operational verification | Platform-level checks, as applicable | Rate limiting, network failures, retries, timeouts, and performance-sensitive behavior |
+
+### 4.3 Framework-Specific Design Decisions
+
+The implementation follows several appropriate testing principles:
+
+- Asynchronous Server Components are not treated as ordinary synchronous client components for Vitest unit testing.
+- Route Handlers and pure server helpers are tested directly where practical.
+- React Testing Library queries prioritize user-observable behavior, including roles and accessible labels.
+- MSW is used to isolate network-dependent client behavior from live upstream services.
+- Coverage thresholds are scoped to selected modules rather than presented as a repository-wide guarantee.
+- Browser-based tests complement rather than replace unit and integration tests.
+- Platform-level verification is recorded separately from automated test coverage.
+- Successfully verified behavior is not classified as untested merely because equivalent automation remains outstanding.
+
+### 4.4 Evidence Classification
+
+For engineering traceability, verification evidence should be classified as follows:
+
+- **Automated:** Executed by a repeatable test suite with recorded results.
+- **Platform-verified:** Executed on the application platform under identified conditions.
+- **Documented:** Supported by a retained scenario record, test output, or other appropriate evidence.
+- **Pending automation:** Verified through practical execution but not yet protected by an equivalent automated regression test.
+
+These classifications avoid conflating practical success with permanent automated coverage.
+
+---
+
+## 5. Test Tooling and Infrastructure
+
+### 5.1 Technology Inventory
+
+| Concern | Implementation |
+|---|---|
+| Test runner | Vitest `3.2.7` |
+| React transformation | `@vitejs/plugin-react` |
+| TypeScript path aliases | `vite-tsconfig-paths` |
+| DOM simulation | `jsdom` |
+| Coverage instrumentation | `@vitest/coverage-v8` |
+| Component testing | React Testing Library |
+| User interaction simulation | `user-event` |
+| DOM assertions | `@testing-library/jest-dom` |
+| HTTP mocking | MSW v2 |
+| Accessibility smoke testing | `jest-axe` |
+| Browser automation | `@playwright/test` |
+| Vitest configuration | `vitest.config.mts` |
+| Test setup | `vitest.setup.ts` |
+| Playwright configuration | `playwright.config.ts` |
+| Shared test utilities | `src/test/utils.tsx` |
+| MSW handlers | `src/test/handlers.ts` |
+| MSW server | `src/test/server.ts` |
+| Developer guidance | `TESTING.md` |
+| IDE and agent conventions | `.cursor/rules/testing.mdc` |
+
+### 5.2 npm Scripts
+
+| Command | Purpose |
+|---|---|
+| `npm test` | Watch-oriented Vitest execution |
+| `npm run test:run` | Single-run automated test execution |
+| `npm run test:ui` | Vitest UI |
+| `npm run test:coverage` | Test execution with coverage reporting and thresholds |
+| `npm run e2e` | Playwright E2E execution |
+| `npm run e2e:ui` | Playwright UI mode, if configured under this script |
+| `npm run typecheck` | TypeScript validation using `tsc --noEmit` |
+
+### 5.3 Test Environment Setup
+
+The documented global setup includes:
+
+- `@testing-library/jest-dom/vitest`.
+- Accessibility matcher integration.
+- MSW lifecycle management using `listen`, `resetHandlers`, and `close`.
+- React Testing Library cleanup after tests.
+- Stable test doubles for selected Next.js modules, including navigation and image handling.
+
+The custom render helper wraps `NextIntlClientProvider`. Zustand does not require an additional provider. TanStack Query and Redux are not part of the documented application stack and are intentionally excluded from the test wrapper.
+
+---
+
+## 6. Test Inventory and Platform Verification
+
+### 6.1 Security and BFF Boundary Tests
+
+| Test Suite | Documented Behaviors |
+|---|---|
+| `lib/server/backendProxyAllowlist.test.ts` | Allowed and denied paths; HTTP-method restrictions |
+| `lib/server/requestGuard.test.ts` | Same-origin acceptance and rejection; rate-limit burst behavior |
+| `app/api/backend/[...path]/route.test.ts` | Unlisted path rejection; missing-cookie authorization behavior; public forwarding with API key and Bearer token; cross-site POST rejection |
+
+These tests establish automated protection for selected proxy and request-guard behaviors.
+
+Additional security hardening should continue to address path normalization, unexpected methods, token exposure, authorization boundaries, and relevant edge cases as the implementation evolves.
+
+### 6.2 Authentication and Session Tests
+
+| Test Suite | Documented Behaviors |
+|---|---|
+| `app/api/auth/session/route.test.ts` | Unauthenticated response; authenticated response with profile; corrupted user cookie |
+| `app/api/auth/login/route.test.ts` | Validation failure; missing environment configuration; successful session creation; token exclusion from JSON; upstream authentication failure without cookie creation |
+| `lib/auth/authParsers.test.ts` | Authentication payload parsing |
+| `lib/phone/buildInternationalPhone.test.ts` | International dialing-code and phone-number normalization |
+
+In addition to these automated tests, the following authentication lifecycle operations have been successfully verified on the platform:
+
+- `signup`
+- `password-reset-session`
+- `logout`
+- `sync-user`
+
+The practical verification of these flows provides additional evidence of authentication lifecycle behavior under the scenarios exercised.
+
+The automated test suite should be expanded to preserve equivalent regression protection for these operations where corresponding automated tests are not yet available.
+
+### 6.3 Product and Client-Side Test Slices
+
+| Test Suite | Documented Behaviors |
+|---|---|
+| `features/contact/**` | API response parsing, including known field-name inconsistencies; service success and failure mapping; UI success and error/retry behavior; accessibility smoke checks |
+| `features/my-bookings/components/StatusChip.test.tsx` | Status-label rendering and accessibility |
+| `hooks/useBookingsUnread.test.tsx` | Hook behavior, local storage, and custom events |
+| `lib/api/httpErrors.test.ts` | Field-error normalization and HTTP fallback handling |
+| `app/api/locale/route.test.ts` | Locale cookie handling, invalid locale, and malformed JSON |
+| `src/test/examples/ContactEmailBadge.*` | Illustrative MSW testing example; not a production feature test |
+
+### 6.4 Playwright End-to-End Tests
+
+| Specification | Current Intent |
+|---|---|
+| `e2e/home.spec.ts` | Home page rendering and CTA navigation to `/cars` |
+| `e2e/critical-flows.spec.ts` | Login form shell, contact page shell, and car-listing route reachability |
+
+Playwright is configured for Chromium, Firefox, and WebKit. The described E2E suite primarily validates public-route rendering and reachability.
+
+**Scope qualification:** Configuration for three browser engines does not, by itself, establish that every test has passed in all three browsers. Actual CI results remain the authoritative evidence.
+
+Authenticated booking E2E coverage is still an identified automation target.
+
+### 6.5 Platform-Level Verification of Critical Scenarios
+
+The application has been exercised on the platform across four critical quality domains. According to the reported verification results, the executed scenarios passed successfully.
+
+This verification complements the automated baseline and provides additional evidence of application behavior beyond the scenarios currently covered by automated tests.
+
+#### A. Booking Integrity
+
+The following scenarios were verified:
+
+- Concurrent booking attempts for the same vehicle and rental period.
+- Booking the same vehicle across overlapping and non-overlapping rental periods.
+- Resubmitting a booking request after a timeout without creating a duplicate booking.
+- Changes in vehicle availability between initial selection and booking confirmation.
+- Invalid booking-state transitions.
+
+These scenarios address important failure modes in a vehicle-rental platform, particularly availability conflicts, duplicate operations, stale state, and invalid workflow transitions.
+
+#### B. Security and Authorization
+
+The following scenarios were verified:
+
+- Preventing a customer from accessing another customer's booking.
+- Preventing one rental office from modifying another office's data.
+- Rejecting unauthorized BFF paths and HTTP methods.
+- Preventing API keys and Bearer tokens from being exposed through responses or error logs.
+- Handling expired sessions and invalid cookies.
+- Exercising repeated requests and rate-limit behavior.
+
+These checks address access isolation, server-side authorization, secret handling, and request-abuse controls.
+
+#### C. Authentication Lifecycle
+
+The following authentication operations were successfully tested on the platform:
+
+| Operation | Verification Status |
+|---|---|
+| `signup` | Successfully verified |
+| `password-reset-session` | Successfully verified |
+| `logout` | Successfully verified |
+| `sync-user` | Successfully verified |
+
+These results establish successful practical verification of the identified authentication lifecycle operations under the conditions exercised.
+
+They should not be interpreted as proof that every possible authentication state, malformed input, concurrent request, or external identity-provider failure has been covered.
+
+#### D. Financial Correctness and Settlement Consistency
+
+The following scenarios were verified:
+
+- Applying coupons according to their intended rules without unintended duplicate application.
+- Maintaining consistency between rental duration, discounts, commission, and the final calculated amount.
+- Preventing duplicate financial effects when operations are retried.
+- Handling upstream failure after booking creation but before the client receives the response.
+- Maintaining consistent booking state across the customer interface, rental-office interface, and administrative dashboard.
+
+These scenarios are particularly important because a successful HTTP response alone does not establish financial correctness. The resulting business state and financial effects must also remain consistent.
+
+#### E. Rate Limiting and Operational Resilience
+
+Rate-limiting behavior has been tested successfully on the platform. This is complemented by the automated request-guard tests covering selected rate-limit burst behavior.
+
+The following operational scenarios and behaviors were also reported as successfully verified:
+
+- Network failures, connection interruptions, and retry behavior.
+- Rate-limit behavior under increased request activity.
+- Performance-sensitive paths under the conditions exercised.
+- Error handling and timeout behavior.
+- Service-availability observations under the conditions tested.
+
+**Evidence boundary:** This report does not assign a scenario count, pass percentage, maximum supported concurrency, latency percentile, throughput figure, or availability percentage because those measurements have not been specified here. Successful rate-limit verification is not equivalent to a quantified capacity benchmark, and operational scenario testing does not replace a documented load-, stress-, or endurance-testing program.
+
+#### F. Verification Conclusion
+
+The reported platform-level results provide additional practical evidence across booking, authentication, security, financial, and operational behavior.
+
+The distinction between platform verification and automated regression coverage remains material. The current findings support confidence in the scenarios executed; automation is required to make equivalent checks repeatable within the development and release process.
+
+For auditability, the next step is to preserve a scenario log containing the scenario identifier, preconditions, steps, expected and observed results, environment, application version, execution date, and relevant sanitized evidence.
+
+---
+
+## 7. Coverage Policy, Quality Gates, and CI
+
+### 7.1 Automated Quality Gates
+
+The documented local quality gates are:
+
+1. `npm run test:run` — automated tests must pass.
+2. `npm run test:coverage` — scoped coverage thresholds must pass.
+3. `npm run typecheck` — TypeScript validation must pass.
+
+The configured minimum thresholds are 70% for statements, branches, functions, and lines across the explicit coverage include list.
+
+### 7.2 Coverage Interpretation
+
+The reported aggregate statement coverage for the gated files is approximately 91%.
+
+The coverage scope includes selected security helpers, authentication and session handlers, the BFF proxy, the contact feature, and selected UI modules.
+
+This is a useful indicator of execution coverage within the selected scope. It must not be interpreted as 91% coverage of the entire repository, 91% coverage of all requirements, or a 91% reduction in production risk.
+
+Coverage quality depends on assertion strength, scenario selection, and whether important failure modes are exercised.
+
+### 7.3 Continuous Integration Workflow
+
+The documented CI pipeline is:
+
+`Checkout → Setup Node.js → npm ci → Lint → Typecheck → Vitest Coverage → Next.js Cache → Playwright Installation → Playwright E2E → Upload Artifacts`
+
+The workflow produces coverage and Playwright report artifacts.
+
+### 7.4 CI Enforcement Caveat
+
+ESLint currently reports pre-existing React Hooks and refs-related violations in production UI code. The lint step uses `continue-on-error`, making it non-blocking.
+
+Consequently, the pipeline is not yet a fully enforced lint quality gate.
+
+Type checking and Vitest coverage are documented as blocking checks. Actual enforcement should be confirmed through CI configuration and branch-protection settings.
+
+### 7.5 Recommended Release Gate
+
+Before adopting a stronger release-readiness claim, the team should verify that:
+
+- All mandatory automated suites pass.
+- Coverage thresholds are enforced against the intended modules.
+- Type checking passes.
+- Lint is blocking once the known debt has been resolved.
+- Required E2E checks pass in the designated CI environments.
+- Critical platform-verification evidence is retained.
+- Known high-severity defects and release-blocking risks are resolved or formally accepted.
+- Deployment and rollback procedures are documented and tested as appropriate.
+
+---
+
+## 8. Risk Assessment
+
+### 8.1 Verified and Mitigated Risk Areas
+
+| Risk ID | Risk | Current Evidence / Mitigation |
+|---|---|---|
+| R1 | Unauthorized use of the keyed backend proxy | Allowlist and proxy handler tests |
+| R2 | Cross-site state-changing BFF requests | Request-guard tests and cross-site POST rejection |
+| R3 | Session creation after invalid login | Login handler tests |
+| R4 | Incorrect session state reporting | Session handler tests |
+| R5 | Silent contact-feature failure | MSW-based error and retry tests |
+| R6 | Regression in international phone normalization | Dedicated utility tests |
+| R7 | Public-route rendering regressions | Playwright smoke tests |
+| R8 | Authentication lifecycle failures involving `signup`, `password-reset-session`, `logout`, and `sync-user` | All four flows have been successfully verified on the platform; automated regression coverage remains to be expanded where equivalent tests are not yet available |
+| R9 | Booking conflicts, duplicate requests, and invalid booking-state transitions | Reported successful platform-level verification of the identified scenarios; automation expansion remains a priority |
+| R10 | Unauthorized cross-customer or cross-office access and unauthorized BFF operations | Platform-level verification reported successful, supplemented by selected automated security tests |
+| R11 | Incorrect coupon, pricing, commission, or settlement behavior | Reported successful platform-level financial verification; broader automated regression protection remains a priority |
+| R12 | Rate-limit failures and request-abuse scenarios | Rate-limiting behavior successfully verified on the platform, in addition to automated request-guard tests |
+| R13 | Network failures, timeout handling, and performance-sensitive behavior | Reported successful platform-level verification for the scenarios exercised; quantitative performance evidence remains a separate requirement |
+
+The status above reflects the reported successful execution of the identified scenarios. It does not imply that every possible failure mode within each risk category has been eliminated.
+
+### 8.2 Remaining Improvement Areas
+
+| Improvement ID | Area | Priority | Recommended Action |
+|---|---|---|---|
+| I1 | Booking regression protection | High | Automate booking integrity, state transitions, concurrency, and retry scenarios |
+| I2 | Authorization regression protection | High | Add automated customer-isolation and office-tenant-isolation tests |
+| I3 | Financial regression protection | High | Add service-level tests for prices, coupons, commissions, duplicate effects, and partial failures |
+| I4 | Authentication lifecycle regression protection | High | Add or expand Route Handler tests for `signup`, `password-reset-session`, `logout`, `sync-user`, and `clear` where equivalent automated coverage is not yet available |
+| I5 | Rate-limit regression protection | Medium | Expand automated request-guard tests to cover relevant rate-limit boundaries, reset behavior, and expected rejection responses |
+| I6 | Operational resilience | High | Automate network-failure, timeout, retry, and rate-limit cases |
+| I7 | Performance evidence | High | Define workload profiles, acceptance criteria, and reproducible performance measurements |
+| I8 | `useApi` behavioral isolation | Medium | Test success envelopes, `localOnly`, cancellation, and 401/422/429 behavior |
+| I9 | Authenticated E2E | High | Implement a complete booking journey against staging or a controlled mock upstream |
+| I10 | Lint enforcement | Medium | Resolve existing violations and make lint blocking |
+| I11 | Upstream contract testing | Medium | Introduce OpenAPI response validation or another suitable contract-testing approach |
+| I12 | CI environment stability | Medium | Use deterministic fixtures or a controlled upstream for E2E |
+| I13 | Coverage-scope governance | Low | Expand the include list as critical modules gain automated tests |
+| I14 | Evidence traceability | High | Retain scenario logs and relevant sanitized test artifacts |
+
+### 8.3 Residual Risk Interpretation
+
+Platform verification reduces uncertainty about the specific scenarios executed. Residual risk remains where:
+
+- The tested scenarios do not cover every relevant input or state combination.
+- Environmental conditions differ from those encountered during testing.
+- Upstream API or database behavior changes.
+- Concurrency or load exceeds the tested conditions.
+- A subsequent code change reintroduces previously corrected behavior.
+- Results cannot be independently reproduced because evidence was not retained.
+
+The primary objective is therefore not merely to report successful tests, but to preserve those results as reproducible engineering controls.
+
+---
+
+## 9. Testing Maturity Assessment
+
+The following ratings are engineering judgments based on the documented implementation and are not externally certified measurements.
+
+| Dimension | Rating | Assessment |
+|---|---:|---|
+| Tooling and Developer Experience | 8.5/10 | Modern tools, structured configuration, and documented workflows |
+| Automated Security-Critical Coverage | 7.5/10 | Meaningful protection for selected BFF, authentication, and security helpers |
+| Automated Product-Feature Coverage | 5.0/10 | Selected feature slices are tested; broader business regression coverage remains a priority |
+| Automated E2E Depth | 4.0/10 | Public-route smoke coverage; authenticated booking journey remains a target |
+| Accessibility Automation | 5.5/10 | Useful smoke coverage on selected interfaces, not a comprehensive accessibility audit |
+| CI Enforcement | 7.0/10 | Core automated checks exist; lint remains non-blocking |
+| Documentation and Team Conventions | 8.0/10 | Dedicated test guide and IDE/agent rules |
+| **Overall Automated Testing Maturity** | **Approximately 6.5/10** | Solid foundation with successful platform verification and further automation required |
+
+### 9.1 Platform Verification Status
+
+**Reported status: Successful verification across the identified critical quality domains.**
+
+The platform verification includes the four authentication lifecycle operations, rate limiting, booking integrity, security and authorization, financial consistency, and the identified operational scenarios.
+
+The platform verification status is reported separately from the automated maturity score because it represents a different form of evidence.
+
+No numerical platform-verification score is assigned. A defensible score would require a defined scoring model, scenario inventory, acceptance criteria, and documented results.
+
+### 9.2 Interpretation
+
+The overall automated maturity rating remains approximately 6.5/10 because successful platform verification does not automatically increase the degree of automated regression protection.
+
+The practical platform results strengthen the assessment of current behavior. The next maturity improvement comes from retaining evidence and converting high-risk scenarios into reliable automated tests.
+
+---
+
+## 10. Engineering Roadmap
+
+### P0 — Preserve Verification and Strengthen Critical Regression Protection
+
+1. Record the successful platform-verification results for `signup`, `password-reset-session`, `logout`, and `sync-user`.
+2. Preserve the successful rate-limiting verification results, including tested request patterns and expected rejection behavior.
+3. Automate authentication lifecycle operations where equivalent automated coverage is not yet available.
+4. Expand automated tests for booking creation, verification, availability conflicts, invalid state transitions, and retry behavior.
+5. Add automated customer and rental-office authorization tests.
+6. Add financial service tests for coupons, pricing, commissions, duplicate transaction effects, and partial failures.
+7. Verify failure handling when an upstream operation succeeds but the client does not receive the response.
+8. Define measurable operational acceptance criteria for critical endpoints.
+9. Maintain a traceable scenario log containing preconditions, expected and observed results, environment, application version, and execution date.
+
+Platform verification is complete for the scenarios reported as successful. The remaining work concerns evidence retention, regression automation, and broader coverage of untested conditions—not repeating these scenarios merely because automated tests have not yet been added.
+
+### P1 — Strengthen Regression Protection and Integration Confidence
+
+10. Implement an authenticated Playwright booking journey on staging or a controlled test environment.
+11. Add dedicated `useApi` behavioral tests.
+12. Introduce upstream contract validation.
+13. Resolve known React Hooks and refs-related lint violations.
+14. Make lint a blocking CI gate.
+15. Ensure that required browser checks execute and pass in the intended CI matrix.
+16. Verify that branch-protection rules enforce the required checks.
+17. Expand automated rate-limit tests to protect against regressions in request-guard behavior.
+
+### P2 — Hardening and Quality Optimization
+
+18. Establish repeatable load and stress tests for critical routes.
+19. Introduce visual regression testing where interface stability justifies the maintenance cost.
+20. Expand accessibility testing beyond smoke checks.
+21. Improve operational observability and alerting verification.
+22. Review the coverage include list as new critical modules are introduced.
+23. Migrate deprecated Vitest configuration patterns, including `environmentMatchGlobs` to `test.projects` where supported by the installed version and configuration.
+
+---
+
+## 11. Operational Runbook
+
+### 11.1 Local Engineering Workflow
+
+```bash
+npm ci
+npx playwright install
+npm run test:run
+npm run test:coverage
+npm run typecheck
+npm run e2e
+```
+
+Playwright browser installation is generally required once per machine. System dependencies may also be required depending on the operating system.
+
+### 11.2 Pull Request Review Requirements
+
+Reviewers should verify that:
+
+- Automated tests pass.
+- Coverage thresholds pass for the configured scope.
+- Type checking passes.
+- New BFF and authentication behavior has appropriate tests.
+- Client network interactions use controlled fixtures where appropriate.
+- Tests assert observable behavior and meaningful outcomes.
+- Security-sensitive changes include negative authorization cases.
+- Platform-verified scenarios are converted into automated tests where feasible.
+- E2E failures are investigated rather than routinely dismissed as environmental noise.
+- Changes to rate limiting preserve the expected request-rejection behavior.
+
+### 11.3 Release Verification
+
+The release process should retain:
+
+- CI test results.
+- Coverage reports.
+- Playwright reports and traces when relevant.
+- Platform-verification scenario logs.
+- Relevant application version and environment identifiers.
+- Outstanding risk assessments and documented exceptions.
+
+The existence of an artifact-upload step does not guarantee that every expected artifact was produced or retained. Successful publication and accessibility of required artifacts should be checked in CI.
+
+---
+
+## 12. Traceability to Architecture
+
+| Architecture Concern | Corresponding Test Control |
+|---|---|
+| Proxy path and method allowlisting | Allowlist and BFF Route Handler tests |
+| API key injection | Proxy forwarding tests |
+| Same-origin request enforcement | Request-guard and proxy tests |
+| Rate limiting | Request-guard tests and successful platform verification |
+| HttpOnly session management | Login handler tests and authentication lifecycle verification |
+| Signup lifecycle | Platform verification; automated regression coverage to be expanded where needed |
+| Password-reset session | Platform verification; automated regression coverage to be expanded where needed |
+| Logout and session cleanup | Platform verification; automated regression coverage to be expanded where needed |
+| User synchronization | Platform verification; automated regression coverage to be expanded where needed |
+| Session visibility | Session Route Handler tests |
+| International phone normalization | Phone utility tests |
+| Client-side BFF consumption | Contact MSW tests and HTTP error normalization |
+| Public App Router routes | Playwright home, login, contact, and cars tests |
+| Booking availability and state transitions | Platform verification; automation expansion planned |
+| Customer and rental-office isolation | Platform verification; automated regression coverage to be expanded |
+| Coupon and financial consistency | Platform verification; service-level automation to be expanded |
+| Network resilience and performance-sensitive paths | Platform verification; quantitative operational evidence and automation to be expanded |
+
+---
+
+## 13. Conclusion and Engineering Decision
+
+The Rento Car customer web application has an established testing foundation aligned with the needs of a Next.js App Router BFF architecture.
+
+The implementation combines automated testing of selected server-side security boundaries, authentication handlers, client features, network behavior, accessibility smoke checks, and public-route browser journeys.
+
+Beyond this automated baseline, the identified authentication lifecycle operations—`signup`, `password-reset-session`, `logout`, and `sync-user`—have been successfully verified on the platform. Rate-limiting behavior has also been successfully tested.
+
+The booking-integrity, authorization, financial-consistency, and operational scenarios identified in this assessment have likewise been reported as successfully verified under the conditions exercised. These results provide meaningful additional evidence of application behavior beyond the scenarios currently covered by automated tests.
+
+The remaining engineering work is focused on preserving the verification evidence, automating critical scenarios, strengthening CI enforcement, and establishing measurable performance and operational acceptance criteria.
+
+### Final Assessment
+
+| Decision Area | Assessment |
+|---|---|
+| Testing foundation | Accepted as a solid baseline |
+| Selected automated controls | Established |
+| Authentication lifecycle scenarios | Reported successfully verified on the platform |
+| Rate-limiting scenarios | Reported successfully verified on the platform |
+| Critical booking scenarios | Reported successfully verified on the platform |
+| Security and authorization scenarios | Reported successfully verified on the platform |
+| Financial-consistency scenarios | Reported successfully verified on the platform |
+| Operational scenarios | Reported successfully verified for the conditions exercised |
+| Automated regression protection | Requires continued expansion |
+| CI quality enforcement | Functional, with a known lint limitation |
+| Independent security or compliance certification | Not established by this report |
+| Unconditional production-readiness certification | Not established by this report |
+
+**Engineering Verdict: GO for Continued Development and Testing Expansion.**
+
+The current baseline is suitable for continued engineering work, subject to the application's normal release controls. A production release decision should additionally consider the severity of outstanding defects, deployment-specific risks, the completeness of the verification evidence, and the operational requirements of the release.
+
+The principal recommendation is to preserve the successful platform verification as auditable evidence and progressively convert the highest-risk scenarios into automated, CI-enforced regression tests.
+
+---
+
+## Appendix A — Test and Configuration File Map
+
+| Path | Responsibility |
+|---|---|
+| `vitest.config.mts` | Vitest configuration and coverage thresholds |
+| `vitest.setup.ts` | Global mocks, MSW lifecycle, matchers, and test setup |
+| `playwright.config.ts` | Browser E2E configuration and web server |
+| `src/test/utils.tsx` | Shared render helper and test exports |
+| `src/test/handlers.ts` | Default MSW request handlers |
+| `src/test/server.ts` | MSW server configuration |
+| `.github/workflows/ci.yml` | CI quality pipeline |
+| `TESTING.md` | Engineering test guide |
+| `.cursor/rules/testing.mdc` | IDE/agent testing conventions |
+
+## Appendix B — Evidence and Reporting Principles
+
+To preserve the credibility of future revisions, each material claim should be supported by the appropriate form of evidence:
+
+- Automated test claims should correspond to actual test files and execution results.
+- Coverage claims should identify the measured metric and scope.
+- Platform-verification claims should correspond to recorded scenarios and observed outcomes.
+- Performance claims should include workload conditions and quantitative measurements where applicable.
+- CI enforcement claims should be supported by workflow behavior and repository protection settings.
+- Security and compliance claims should not exceed the scope of the tests, reviews, and audits actually performed.
+
+**Document End**
