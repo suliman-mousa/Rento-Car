@@ -1,0 +1,273 @@
+# Engineering Assessment Report
+## Flutter Test Architecture & Quality Gates: Rento Mobile
+
+| Field | Value |
+|---|---|
+| **Document ID** | RENTO-QA-TEST-2026-001 |
+| **Classification** | Internal, Engineering |
+| **Scope** | Mobile client (`rento` Flutter monorepo: Customer + Office) |
+| **Assessment date** | 2026-10-17 |
+| **Baseline context** | Post test-stack bootstrap (`bloc_test` / `mocktail` / `golden_toolkit` / CI) |
+| **Author role** | Senior Flutter / QA Architecture |
+| **Status** | Baseline established. Maturity Level 2 (see §7) |
+| **Owner** | Mobile Tech Lead |
+
+---
+
+## 1. Executive Summary
+
+A production-oriented automated test foundation has been established for the `flutter_bloc`-based Rento client, following the Test Pyramid and dependency-isolation practices. In parallel, key business workflows have been exercised manually in real application scenarios across customer and office flows. Automated product coverage is still not representative, so the manual evidence and the automated coverage status should be considered separately.
+
+**Key figures**
+
+| Metric | Value |
+|---|---|
+| Automated tests | 50 passing at bootstrap |
+| Cubit coverage (sampled) | 4 of ~25 Cubits |
+| Bloc coverage (sampled) | 1 of 5 Blocs |
+| Line coverage (current) | To be measured and recorded |
+| Static analysis | Existing infos/warnings to be counted; no new blocking errors introduced |
+| Maturity | Level 2 of 4 |
+
+**Assessment**
+
+| Dimension | Rating | Note |
+|---|---|---|
+| Tooling and harness | Adequate | `bloc_test`, `mocktail`, golden testing, CI |
+| State-layer coverage (Cubit/Bloc) | Partial | Reference implementations complete; product coverage not yet representative |
+| Presentation isolation | Adequate (sample) | Widget tests via `MockCubit` + `whenListen` |
+| Data-layer isolation | Adequate (sample) | Mocked repositories; no real network in unit tests |
+| CI quality gate | Basic | format + analyze + test + coverage artifact |
+| E2E on device | Deferred | Scaffold exists; blocked by local toolchain, not design |
+
+**Conclusion.** The project has moved from ad-hoc tests to an extensible system. Manual scenario validation adds practical confidence in key booking, synchronization, network-recovery, settlement, and notification workflows. The remaining quality-engineering gap is to preserve these checks as auditable scenario records and automate the highest-risk cases, while expanding Cubit/Bloc coverage.
+
+---
+
+## 2. Reference Practices and Evaluation Criteria
+
+The assessment uses widely adopted industry principles as a measurement framework. It is an engineering checklist, not a formal certification.
+
+| Reference | Application |
+|---|---|
+| Test Pyramid (Fowler, Google Testing Blog) | Many unit tests, fewer widget tests, few integration tests |
+| FIRST (Fast, Isolated, Repeatable, Self-validating, Timely) | Mocked dependencies; no real network or storage in unit tests |
+| ISTQB test levels and independence | Cubit logic separated from UI; UI separated from data |
+| Flutter/Bloc community practice | `bloc_test`, `mocktail`, golden testing |
+| CI maturity (basic quality gate) | PR/push → format → analyze → test → coverage |
+| Clean Architecture testability | Use cases and repositories mockable through interfaces or injection |
+
+---
+
+## 3. System Under Test
+
+| Attribute | Current state |
+|---|---|
+| Framework | Flutter (SDK ^3.8.1) |
+| State management | `flutter_bloc` (Cubit + Bloc) |
+| Equality | `equatable` (no `freezed`) |
+| DI (Office) | `get_it` (`injection_container.dart`) |
+| Networking | Dio + `ApiService` |
+| Navigation / i18n | GetX |
+| Routing package | None (no `go_router`) |
+| Structure | Hybrid: `lib/cubits` (Customer) + `lib/features/office` (feature-first) |
+
+The hybrid structure is acceptable but requires a dual test strategy: Cubits tested from the shared layer, and feature Blocs tested with `GetIt` reset and mocks.
+
+---
+
+## 4. Delivered Test Architecture
+
+### 4.1 Dev dependencies
+
+| Package | Purpose |
+|---|---|
+| `bloc_test` | `blocTest`, `whenListen` |
+| `mocktail` | Null-safe mocks (preferred over Mockito in modern Dart) |
+| `golden_toolkit` | Visual regression |
+| `integration_test` (SDK) | Device-level journey tests |
+
+### 4.2 Harness
+
+| Artifact | Responsibility |
+|---|---|
+| `test/helpers/pump_app.dart` | Material/Get/theme/ScreenUtil setup + Bloc providers |
+| `test/helpers/mocks.dart` | Shared mocks and `registerFallbackValue` |
+| `test/flutter_test_config.dart` | Golden font bootstrap |
+| `.cursor/rules/flutter-testing.mdc` | Convention enforcement for tooling and humans |
+| `TESTING.md` | Operator runbook |
+
+### 4.3 Structural mirroring
+
+`lib/` is mirrored under `test/` (e.g. `governorates_cubit.dart` → `governorates_cubit_test.dart`) for discoverability.
+
+### 4.4 Implemented test categories
+
+| Level | Examples | Verification style |
+|---|---|---|
+| Unit: Cubit | Ads, Contact, Governorates, Nav | initial / success / failure / `seed` + multi-act / `verify` |
+| Unit: Bloc | SettlementBloc | event → states + repository `verify` |
+| Unit: Repository / Model | GovernoratesRepository, ContactModel | success, failure, `fromJson`/`toJson` |
+| Widget | ContactInfoScreen | loading / list / error + retry |
+| Golden | Contact loading | Visual baseline (to be replaced, see §11) |
+| Integration (scaffold) | `integration_test/app_test.dart` | Journey smoke (device required) |
+
+### 4.5 Minimal production seams (non-breaking)
+
+- Optional `ApiService` injection in `GovernoratesRepository`
+- Optional `ContactCubit` injection in `ContactInfoScreen`
+- Retry action in the error state (behaviorally verifiable)
+- Value equality for `ContactData` to support `Equatable` states
+
+These follow the principle of testability as a first-class design concern.
+
+---
+
+## 5. Manual Business Scenario Validation
+
+In addition to the automated test foundation described in this report, the Rento application has undergone hands-on validation using real application scenarios and varied test conditions across the customer and office workflows. The following business-critical areas were exercised manually:
+
+| Scenario area | Manual validation focus |
+|---|---|
+| Concurrent booking attempts | Competing booking attempts for the same vehicle and the resulting availability/booking behavior |
+| Cross-app booking state | Booking status changes and consistency between the customer application and office application |
+| Network interruption and retries | Behavior during network failures, repeated actions, and retry scenarios |
+| Pricing and settlements | Consistency of amounts and settlement outcomes between the involved parties |
+| Notifications and state refresh | Notification delivery and booking-state updates after retry or recovery scenarios |
+
+These hands-on scenarios provide practical evidence that important business workflows have been exercised beyond isolated unit-test samples. They complement, rather than replace, automated regression tests: manual validation can explore realistic combinations of conditions, while automation makes selected cases repeatable and enforceable in CI.
+
+**Evidence boundary.** This report records that these scenario areas were manually exercised in real application flows. It does not claim a quantified pass rate, exhaustive coverage of every possible combination, or independent verification of backend concurrency guarantees. For auditability, the recommended next step is to retain a scenario log with preconditions, steps, expected and observed outcomes, environment/build, date, and any defects found or retested.
+
+---
+
+## 6. Evidence of Execution
+
+| Gate | Result |
+|---|---|
+| `flutter test` | 50/50 passed (at bootstrap) |
+| `flutter test --coverage` | Line coverage baseline to be recorded |
+| `flutter analyze` | Existing infos/warnings to be counted; none newly introduced |
+| Golden baseline | `test/screens/goldens/contact_info_loading.png` generated |
+| Integration on local Windows | Blocked by missing Visual Studio toolchain / multiple device selection (environmental) |
+
+---
+
+## 7. Maturity Model
+
+| Level | Definition | Status |
+|---:|---|---|
+| 0 | No automated tests | n/a |
+| 1 | Ad-hoc unit tests | Surpassed |
+| **2** | **Harness + CI + representative samples across layers** | **Current** |
+| 3 | Critical paths covered (auth, checkout, bookings, office operations) + scoped coverage threshold enforced | Target |
+| 4 | Flake budget, golden CI, device-farm E2E, contract and mutation testing | Stretch |
+
+Moving to Level 3 requires coverage of revenue and office paths, not additional tooling.
+
+---
+
+## 8. Practice Checklist
+
+| Practice | Status | Evidence |
+|---|---|---|
+| Isolated unit tests (no real I/O) | Met (sample) | `mocktail` in Cubit/Repo/Bloc tests |
+| State-transition tests for Bloc/Cubit | Met (sample) | `blocTest` success/failure |
+| UI tested against a fake state stream | Met (sample) | `whenListen` + Contact screen |
+| Visual regression for a key screen | Met (sample, low value) | `golden_toolkit` |
+| Repository parsing and error mapping | Met (sample) | Governorates + ContactModel |
+| CI format/analyze/test | Met | `.github/workflows/ci.yml` |
+| Coverage threshold on state layer | Not met | Soft emptiness check only |
+| Full Cubit/Bloc inventory coverage | Not met | 4/~25 Cubits, 1/5 Blocs |
+| No new analyzer warnings (baseline gate) | Not met | Existing warnings unmanaged |
+| Test data builders / fixtures | Not met | Inline data per test |
+| Flaky-test policy | Not defined | See §10 |
+| Device E2E in CI | Not met | Needs emulator job and secrets/Firebase strategy |
+
+---
+
+## 9. Risk Register
+
+| ID | Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|---|
+| T-01 | Large untested Cubit/Bloc surface | High | High | Prioritize auth, checkout, bookings, office cars/orders |
+| T-02 | Blocs coupled to `sl()` inside handlers | High | High | Constructor-inject use cases; keep `GetIt` at the composition root. Prerequisite for testing `OfficeCarsBloc` and `BookingBloc` |
+| T-03 | GetX `.tr` / ScreenUtil in widgets | Medium | Low | Always use the `pumpApp` harness |
+| T-04 | Golden flake across fonts/OS | Medium | Medium | Load fonts explicitly; generate and compare goldens on Linux CI only |
+| T-05 | Integration tests blocked locally | Medium | Medium | Document `-d <device>`; add a CI Android emulator job |
+| T-06 | Coverage number without meaning | Medium | Medium | Enforce thresholds on the state layer first, raise gradually |
+| T-07 | Analyzer warnings accumulating | Medium | Low | Fail CI on new warnings against a recorded baseline |
+
+---
+
+## 10. Gap Analysis
+
+**Delivered**
+
+1. Standard Bloc tooling in place.
+2. Separation of concerns: state logic without UI, UI without network.
+3. A working CI gate on GitHub.
+4. Runbook and convention rules to prevent regression in practice.
+
+**Outstanding (expected for Level 3)**
+
+1. Systematic coverage of every critical Cubit/Bloc.
+2. Quantitative coverage threshold (line/branch) on the state layer.
+3. Guest-journey verification: search → details → verify → booking.
+4. Explicit use-case injection in `OfficeCarsBloc` / `SettlementBloc` (see T-02).
+5. API contract tests (recommended where the backend changes frequently).
+
+---
+
+## 11. Recommended Roadmap
+
+### P0: Next sprint (risk reduction)
+
+1. **Remove `sl()` coupling** from `OfficeCarsBloc` and `BookingBloc` by constructor-injecting use cases (prerequisite for item 3).
+2. **Cubit tests:** `AuthCubit`, `CheckoutCubit`, `BookingVerificationCubit`, `BookingHistoryCubit`.
+3. **Bloc tests:** `OfficeCarsBloc`, `BookingBloc`.
+4. **Coverage gate scoped to `lib/cubits` and `lib/features/**/bloc`**, starting at a realistic level (e.g. 40%) and raised as tests land. Report global coverage alongside without a threshold.
+5. **Analyzer baseline:** record the current warning set and fail CI on new ones.
+
+### P1: Quality hardening
+
+1. **Guest-journey widget test** (search → details → verify → booking) using fake repositories. This provides most of the value of E2E at a fraction of the cost.
+2. **Golden tests** moved to high-value screens (car card, booking summary, payment states), limited to stable states.
+3. **CI Android emulator job** running `integration_test`.
+4. **Ports and Adapters:** convert hard repository dependencies to interfaces where needed.
+5. **Test data builders/fixtures** for cars, bookings, and users.
+
+### P2: Engineering excellence
+
+1. **Flaky-test policy:** a test that fails intermittently is fixed or quarantined with a tracking issue within one sprint; retries are diagnostic, not a fix.
+2. PR review checklist (or mutation testing) for state-layer changes.
+3. Test owners per feature module, including golden maintenance.
+4. API contract tests against an OpenAPI schema or recorded fixtures.
+
+---
+
+## 12. Operating Commands
+
+```bash
+flutter test
+flutter test --coverage
+flutter test --update-goldens
+flutter test integration_test -d <deviceId>
+```
+
+Operational details: [`TESTING.md`](../TESTING.md).
+
+---
+
+## 13. Formal Conclusion
+
+The project now has:
+
+- **Architecture for testability:** harness, mocks, and structural mirroring
+- **Executable evidence:** 50 automated tests passing
+- **Governance seed:** CI, convention rule, and runbook
+
+This is sufficient to consider the Baseline / Level 2 stage complete against industry practice. Reaching a production-complete level depends on systematic coverage of business-critical paths with enforced CI gates, not on new libraries.
+
+| Verdict | **GO for expansion.** Foundation accepted; coverage of product-critical paths is the next critical path. |
+|---|---|
