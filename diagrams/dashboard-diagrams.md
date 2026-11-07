@@ -123,8 +123,7 @@ stateDiagram-v2
     Authenticated --> Authenticated: authorized API calls
 
     Authenticated --> Expired: JWT exp reached
-    Authenticated --> Revoked: API returns 401/403
-    Authenticated --> Anonymous: tab/window close
+    Authenticated --> Revoked: API returns 401
 
     Expired --> Teardown: clearSession()
     Revoked --> Teardown: handleUnauthorizedSession()
@@ -193,7 +192,7 @@ flowchart LR
     end
 
     subgraph L2["Layer 2 — Reactive"]
-        B1["401/403 interceptor"]
+        B1["401 interceptor"]
         B2["Auth endpoint exclusion"]
     end
 
