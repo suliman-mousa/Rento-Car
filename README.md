@@ -37,7 +37,7 @@ flowchart TB
 | **[Customer Web](https://rentocar24.com/)** | Next.js App Router, React, TypeScript, BFF | Public-facing booking platform with server-side rendering and SEO support |
 | **Mobile App** — [App Store](https://apps.apple.com/de/app/rento-car-car-rental/id6760517523) · [Google Play](https://play.google.com/store/apps/details?id=com.rentocar.app) | Flutter, Dart, BLoC/Cubit | Shared mobile application supporting both customer and rental-office workflows |
 | **Admin Dashboard** | React SPA, Vite, Zustand | Platform administration, financial reporting, and operational control |
-| **Backend** | Laravel, REST API | Shared backend services consumed by all three client applications |
+| **Backend** | Laravel, MySQL, REST API | Shared backend services consumed by all three client applications |
 
 Each client addresses a distinct operational boundary while consuming shared backend services — a **multi-client architecture built around a common business domain and backend**.
 
@@ -90,6 +90,33 @@ These challenges required coordinated decisions across application architecture,
 
 ---
 
+## Booking Lifecycle
+
+Every booking moves through five states across the customer, the rental office, and the platform admin. Transitions are validated server-side, and every status change is propagated in real time and stays synchronized across all platforms: customer web, mobile app (customer and rental-office modes), and admin dashboard.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Pending: Customer requests a booking
+    Pending --> Accepted: Rental office accepts
+    Pending --> Rejected: Rental office rejects
+    Accepted --> Confirmed: Admin confirms
+    Confirmed --> Completed: Rental office marks the car as returned
+    Rejected --> [*]
+    Completed --> [*]
+```
+
+| State | Set by | Meaning |
+|---|---|---|
+| `pending` | Customer | Booking requested, awaiting the rental office |
+| `accepted` | Rental office | Office accepted the request |
+| `rejected` | Rental office | Office declined the request |
+| `confirmed` | Admin | Platform confirmed the booking |
+| `completed` | Rental office | Car returned to the rental company |
+
+After a booking is completed, the customer is prompted in the app to rate the rental. The rating is feedback only and does not change the booking status.
+
+---
+
 ## Deep-Dive Architecture Documentation
 
 The following documents describe the architecture, security considerations, state management, and engineering trade-offs across the platform's client applications.
@@ -111,7 +138,7 @@ Each document focuses on the architectural decisions and implementation trade-of
 | **Web** | Next.js · React · TypeScript · Tailwind CSS |
 | **Admin** | React · Vite · Zustand · React Router |
 | **Mobile** | Flutter · Dart · BLoC · Cubit · GetIt (Dependency Injection) |
-| **Backend** | Laravel · REST API |
+| **Backend** | Laravel · MySQL · REST API |
 | **Real-Time** | Laravel Echo · Pusher · Firebase Cloud Messaging |
 | **Maps & Geospatial** | Google Maps Platform · Places · Directions |
 | **Authentication & Security** | HttpOnly Cookies · Bearer Tokens · Encrypted Secure Storage · API Allowlisting |
@@ -134,7 +161,7 @@ Requirements
     → Production Iteration
 ```
 
-Responsibilities spanned architectural planning, technical decision-making, task decomposition, engineering coordination, code review, testing, release validation, and ongoing improvement — leading a team of up to **7 engineers** while remaining hands-on across the client applications.
+Responsibilities spanned architectural planning, technical decision-making, task decomposition, engineering coordination, code review, testing, release validation, and ongoing improvement — leading a team of up to **7 engineers** while remaining hands-on across the client applications. The Laravel/MySQL backend (data model, multi-tenant isolation, authorization, REST API, and real-time events) was designed and its development supervised as part of this role.
 
 A core engineering principle throughout the project was to **improve architectural consistency while preserving delivery velocity and production stability**.
 

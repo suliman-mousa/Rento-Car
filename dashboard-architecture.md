@@ -650,7 +650,19 @@ Areas include:
 * Arabic/English UI and RTL/LTR behavior
 * Regression validation before production releases
 
-Client-side unit coverage includes session helpers in `src/utils/auth.test.js` and URL sanitization in `src/utils/safeUrl.test.js`, run with Vitest.
+The automated client-side suite contains 23 tests in 7 files, run with Vitest:
+
+| Area | File |
+|---|---|
+| Session helpers (Sanctum vs JWT expiry, storage cleanup) | `src/utils/auth.test.js` |
+| URL sanitization | `src/utils/safeUrl.test.js` |
+| Protected routes | `ProtectedRoute.test.jsx` |
+| API hook with network isolation (MSW) | `useApi.test.jsx` |
+| Accessible controls (jest-axe) | `Toggle.test.jsx` |
+| Car image MIME and size validation | `carImageValidation.test.js` |
+| Finance metric formulas | `financeMetrics.test.js` |
+
+Component tests use React Testing Library, network calls are faked at the boundary with MSW, and jest-axe provides accessibility smoke checks. A 70% lines/functions threshold is enforced on the gated module set. Playwright covers the sign-in journey (`e2e/login.spec.ts`). The GitHub Actions pipeline runs lint, typecheck, Vitest with coverage and Playwright E2E on every change.
 
 Client-side checks are complemented by backend validation, since the backend remains the authoritative enforcement layer.
 

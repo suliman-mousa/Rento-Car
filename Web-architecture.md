@@ -388,6 +388,7 @@ The following operations use dedicated Route Handlers:
 /api/auth/login
 /api/auth/signup
 /api/auth/password-reset-session
+/api/auth/sync-user
 ```
 
 These routes are separated from the generic domain proxy because they establish or modify the application's HttpOnly session state.
@@ -718,11 +719,15 @@ This prevents individual request failures from unnecessarily destabilizing the o
 
 ### CI Validation
 
-The project validates changes through:
+Every change runs through the GitHub Actions pipeline (`.github/workflows/ci.yml`):
 
-* Linting
-* Type checking
+* Linting (currently non-blocking while pre-existing React Hooks violations are resolved)
+* Type checking (`tsc --noEmit`)
+* Vitest unit, Route Handler and component tests, with scoped coverage thresholds (70%)
+* Playwright end-to-end tests (Chromium, Firefox, WebKit)
 * Production build
+
+Coverage and Playwright reports are uploaded as CI artifacts.
 
 ---
 
