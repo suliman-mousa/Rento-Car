@@ -2,7 +2,7 @@
 
 **Live:** [rentocar24.com](https://rentocar24.com/) · [App Store](https://apps.apple.com/de/app/rento-car-car-rental/id6760517523) · [Google Play](https://play.google.com/store/apps/details?id=com.rentocar.app)
 
-Rento Car is a multi-tenant car rental platform connecting **customers and rental offices** through a unified ecosystem of applications sharing a common business domain and backend services
+Rento Car is a multi-tenant car rental platform connecting **customers and rental offices** through a unified ecosystem of applications sharing a common business domain and backend services.
 
 The platform combines booking workflows, real-time vehicle availability, rental-office operations, geospatial delivery, financial settlements, and role-based access control into a single production system spanning **three client applications serving four distinct user-facing experiences**.
 
