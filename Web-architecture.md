@@ -6,7 +6,7 @@
 
 Customer Web is the customer-facing web application for **Rento Car**, a multi-feature car-rental platform.
 
-The application is built with **Next.js App Router, React, and TypeScript**, and follows a **Backend-for-Frontend (BFF)** architecture to establish a controlled boundary between the browser and the upstream REST API.
+The application is built with **Next.js App Router, React, and TypeScript**, and follows a **Backend-for-Frontend (BFF)** architecture to establish a controlled boundary between the browser and the upstream REST API
 
 The architecture combines:
 
